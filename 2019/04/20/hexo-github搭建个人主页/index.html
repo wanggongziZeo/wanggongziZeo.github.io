@@ -246,7 +246,7 @@
 配置ssh key是为了解决本地文件和服务器端文件相连接，如果没有进行配置，每次提交时都需要从输入账户和密码，相当麻烦。<br>
 git安装之后，打开git bash，输入<strong>ssh-keygen -t rsa -C “邮件地址”</strong>，然后按照要求操作，一般是选择默认，同时询问是否需要输入密码，此处直接回车，不需要输入密码，最终会生成一个文件.ssh在user文件夹下，使用写字板打开文件<font color="Red">.ssh/id_rsa.pub</font>文件并复制所有内容，打开github主页，进入setting-&gt;SSH and GPG key，然后点击New SSh key，并将刚才的内容复制进来，名字可以随便取，保存。之后混默认为使用这个SSH进行配置。<br>
 这些做完之后，可以输入<em>ssh -T <a href="mailto:git@github.com" target="_blank" rel="noopener">git@github.com</a></em>进行测试，如果出现<font color="Red">Are you sure you want to continue connecting (yes/no)?</font>，输入yes，然后会看到：<em>Hi wanggongziZeo! You’ve successfully authenticated, but GitHub does not provide shell access.</em>，说明SSH配置成功了。<br>
-<img src="%5Bhexo-github%E6%90%AD%E5%BB%BA%E4%B8%AA%E4%BA%BA%E4%B8%BB%E9%A1%B5/ssh-key-gen.png%5D(https://github.com/wanggongziZeo/Image-folder/blob/master/Blog/hexo/blog.png)" alt="Blog"><br>
+<img src="http://1.z9ls.com/t6/701/1555825318x2728278590.png" alt="ssh-key-gen"><br>
 最后，还需要配置个人的github账号和密码：<br>
 git config --global <a href="http://user.name" target="_blank" rel="noopener">user.name</a> “wanggongziZeo”// 你的github用户名，非昵称<br>
 git config --global user.email  <a href="mailto:%22xxx@qq.com" target="_blank" rel="noopener">&quot;xxx@qq.com</a>&quot;// 填写你的github注册邮箱</li>
@@ -270,9 +270,9 @@ deploy:<br>
 hexo g //generate 生成博客<br>
 hexo d //deploy 部署博客<br>
 之后打开个人主页如<a href="https://wanggongziZeo.github.io" title="我的主页">wanggongziZeo.github.io</a>，就会看到已经生成的博客。<br>
-<img src="%5Bhexo-github%E6%90%AD%E5%BB%BA%E4%B8%AA%E4%BA%BA%E4%B8%BB%E9%A1%B5/blog.png%5D(https://github.com/wanggongziZeo/Image-folder/blob/master/Blog/hexo/blog.png)" alt="Blog"></li>
+<img src="http://1.z9ls.com/t6/701/1555825277x2728278590.png" alt="my blog"><br>
+每次重新编辑博客后，不一定需要每次部署到github上，此时可以先hexo g生成，然后hexo s，通过本地预览，打开浏览器访问 http://localhost:4000就可看到内容。</li>
 </ol>
-<p>每次重新编辑博客后，不一定需要每次部署到github上，此时可以先hexo g生成，然后hexo s，通过本地预览，打开浏览器访问 <a href="http://localhost:4000" target="_blank" rel="noopener">http://localhost:4000</a> 就可看到内容。</p>
 <h2><span id="写博客">写博客</span></h2>
 <p>定位到我们的hexo根目录，执行命令：<br>
 hexo new 'my-first-blog’<br>
