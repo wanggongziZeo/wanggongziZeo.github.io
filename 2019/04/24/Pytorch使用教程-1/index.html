@@ -14,7 +14,7 @@
     <script async defer src="https://buttons.github.io/buttons.js"></script>
     <title>
         
-          Pytorch使用教程-1 - 王小声
+          Pytorch基础：Tensor和Autograd - 王小声
         
     </title>
 
@@ -95,7 +95,7 @@
                               <a class="tag" href="/tags/#pytorch" title="pytorch">pytorch</a>
                             
                         </div>
-                        <h1>Pytorch使用教程-1</h1>
+                        <h1>Pytorch基础：Tensor和Autograd</h1>
                         <h2 class="subheading">基于官方文档使用Pytorch</h2>
                         <span class="meta">
                             Posted by 王小声 on
@@ -146,14 +146,14 @@
 
                         
                         <li>
-                            <a href="/about/">About</a>
+                            <a href="/archive/">Archives</a>
                         </li>
                         
                     
 
                         
                         <li>
-                            <a href="/archive/">Archives</a>
+                            <a href="/about/">About</a>
                         </li>
                         
                     
@@ -216,7 +216,268 @@
                 col-md-10 col-md-offset-1
                 post-container">
 
-                
+                <h2><span id="写在前面">写在前面：</span></h2>
+<p>最近开始使用Pytorch训练深度网络模型，相比TensorFlow、Caffe，Pytorch给我的感觉更加舒适，Python编程、动态图机制、网络构建灵活等各种便利性，确实对自己的科研工作提供了一定的帮助，学习之余，把自己的一些学习心得记录下来，写成此博客，也算是一个教程。<br>
+该教程以官方文档为基础，结合自己的一些实验，进行具体分析。整个工作包含基础的pytorch张量、数据的预处理、数据增强、模型定义、权值初始化、模型微调、学习策略调整、损失函数选择、优化器选择、可视化等等。</p>
+<h2><span id="pytorch张量">Pytorch张量：</span></h2>
+<p>pytorch基于Python，可以使用GPU加速运算，其基本操作是使用张量（Tensor）进行运算，张量可简单的认为是一个数组，且支持高效的科学运算。他可以是一个数（标量），一维数组（向量），二维数组（矩阵）以及更高维的数组。Tensor和numpy的ndarray类似，但是pytorch的Tensor支持GPU加速运算。</p>
+<p>从接口的角度来说，对tensor的操作可以分为两类：</p>
+<ol>
+<li>torch.function，如torch.save；</li>
+<li>tensor.function，如tensor.view等。<br>
+对tensor的大部分操作都同时支持这两类接口，且相互等价，如torch.sum(a,b)与a.sum(b)等价。</li>
+</ol>
+<p>从存储的角度来说，对tensor的操作又可以分为两类：</p>
+<ol>
+<li>操作不会改变数据本身，如a.add(b)，加法返回一个新的tensor；</li>
+<li>操作会修改自身的数据，如a.add_(b)，加法的结果存储在a中，a被修改了。</li>
+</ol>
+<p>函数以_结尾的都是inplace方法，即会修改调用者自己的数据，在实际应用中应加以区分。</p>
+<h3><span id="创建tensor">创建Tensor</span></h3>
+<p>pytorch中创建tensor的方式有很多，具体如下表所示：</p>
+<table>
+<thead>
+<tr>
+<th>函数</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tensor(*size)</td>
+<td>基础类构造函数</td>
+</tr>
+<tr>
+<td>tensor(data,)</td>
+<td>类似np.array构造函数</td>
+</tr>
+<tr>
+<td>ones(*size)</td>
+<td>全1的tensor</td>
+</tr>
+<tr>
+<td>zeros(*size)</td>
+<td>全0的tensor</td>
+</tr>
+<tr>
+<td>eye(*size)</td>
+<td>对角线为1，其他为0</td>
+</tr>
+<tr>
+<td>arange(s,e,step)</td>
+<td>从s到e，间隔为step</td>
+</tr>
+<tr>
+<td>linspace(s,e,steps)</td>
+<td>从s到e，等间隔切分为steps份</td>
+</tr>
+<tr>
+<td>rand/randn(*size)</td>
+<td>随机数</td>
+</tr>
+<tr>
+<td>normal(mean,std)/uniform(from,to)</td>
+<td>正态分布/均匀分布</td>
+</tr>
+<tr>
+<td>randperm(m)</td>
+<td>随机排列</td>
+</tr>
+</tbody>
+</table>
+<p>这些创建方法在创建的时候可以指定数据类型dtype的存放的device（cpu/gpu）。<br>
+其中使用过Tensor函数新建tensor是最复杂多变的方式，他既可以<strong>接受一个list或者tuple，并根据list或tuple的数据新建tensor</strong>，也能根<strong>据指定的形状新建tensor</strong>，还可以<strong>传入其他的tensor</strong>。如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 指定tensor的形状</span><br><span class="line">torch.Tensor(2,3)</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tensor([[0., 0., 0.],</span><br><span class="line">        [0., 0., 0.]])</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># 用list或者tuple的数据创建tensor</span><br><span class="line">torch.Tensor([1,2,3])   # 列表</span><br><span class="line">torch.Tensor((1,2,3))   # 元祖</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tensor([1., 2., 3.])</span><br><span class="line">tensor([1., 2., 3.])</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># 传入其他的tensor</span><br><span class="line">a = torch.rand(2,3)</span><br><span class="line">b = torch.Tensor(a)</span><br></pre></td></tr></table></figure>
+<p>输出a和b分别为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">tensor([[0.2509, 0.7383, 0.9235],</span><br><span class="line">        [0.6673, 0.2384, 0.2154]])  # a</span><br><span class="line">tensor([[0.2509, 0.7383, 0.9235],</span><br><span class="line">        [0.6673, 0.2384, 0.2154]])  # b</span><br></pre></td></tr></table></figure>
+<p>由上面可以知道，torch创建出来的张量都是tensor形式，由于其基于python，可以很方便的进行之间的转换，如将tensor转换成list：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">c = b.tolist()</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[[0.25086772441864014, 0.7382869124412537, 0.9234598278999329],</span><br><span class="line"> [0.667336106300354, 0.23842841386795044, 0.21543049812316895]]</span><br></pre></td></tr></table></figure>
+<p>tensor.size()返回torch.Size()对象，他是tuple的子类，但是其使用方式与tuple略有区别：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">b_size = b.size()</span><br><span class="line">print(b_size)</span><br><span class="line">print(type(b_size))</span><br></pre></td></tr></table></figure>
+<p>结果为:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">torch.Size([2, 3])</span><br><span class="line">&lt;class &apos;torch.Size&apos;&gt;</span><br></pre></td></tr></table></figure>
+<p>创建一个和b形状一样的tensor：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">c = torch.Tensor(b_size)</span><br></pre></td></tr></table></figure>
+<p>输出结果为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tensor([[9.4131e+24, 4.5907e-41, 0.0000e+00],</span><br><span class="line">        [0.0000e+00, 0.0000e+00, 0.0000e+00]])</span><br></pre></td></tr></table></figure>
+<p>除了tensor.size()之外，还可以使用tensor.shape直接查看tensor的形状，tensor.shape等价于tnesor.size()。<br>
+需要注意的是，torch.Tensor(*sizes)创建tensor时，系统不会马上分配空间，只是会计算剩余的内存是否足够使用，使用到tensor时才会分配，而其它操作都是在创建完tensor之后马上进行空间分配。</p>
+<p>其它常用的创建tensor的方法举例如下。</p>
+<ul>
+<li>
+<p>生成一个未初始化的5x3的矩阵，该矩阵的值都是0元素（之前版本会出现随机值）：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">import torch</span><br><span class="line">x = torch.empty(5,3)</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">tensor([[0.0000e+00, 0.0000e+00, 0.0000e+00],</span><br><span class="line">      [0.0000e+00, 0.0000e+00, 0.0000e+00],</span><br><span class="line">      [0.0000e+00, 0.0000e+00, 0.0000e+00],</span><br><span class="line">      [0.0000e+00, 1.3733e-42, 0.0000e+00],</span><br><span class="line">      [0.0000e+00, 1.2201e-32, 0.0000e+00]])</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>生成一个随机的5x3的矩阵（值随机）：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">x = torch.rand(5,3)</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">tensor([[0.1025, 0.6877, 0.1893],</span><br><span class="line">      [0.4181, 0.5566, 0.5333],</span><br><span class="line">      [0.2848, 0.9526, 0.7599],</span><br><span class="line">      [0.6815, 0.7727, 0.4599],</span><br><span class="line">      [0.7422, 0.2085, 0.4600]])</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>生成一个数据类型为long的5x3的零矩阵：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.zeros(5,3,dtype=torch.long)</span><br></pre></td></tr></table></figure>
+<p>也可以：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.zeros((5,3),dtype=torch.int16)   #使用元祖</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">tensor([[0, 0, 0],</span><br><span class="line">      [0, 0, 0],</span><br><span class="line">      [0, 0, 0],</span><br><span class="line">      [0, 0, 0],</span><br><span class="line">      [0, 0, 0]], dtype=torch.int16)</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>对角线为1，其余为0的矩阵，不一定要求是方阵</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.eye(2,3)</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tensor([[1., 0., 0.],</span><br><span class="line">      [0., 1., 0.]])</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>生成一个从1到5，间隔为2的数据</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.arange(1,6,2)</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tensor([1, 3, 5])</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>从1到10，生成3个数，且三个数等差：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.linspace(1,10,3)</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tensor([ 1.0000,  5.5000, 10.0000])</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>指定存储设备(cpu/gpu)：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.randn(2,3,device=torch.device(&quot;cpu&quot;))</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>长度为10的随机排列：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.randperm(10)</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tensor([3, 9, 6, 4, 5, 7, 2, 1, 0, 8])</span><br></pre></td></tr></table></figure>
+<p><strong>torch.tensor()是新版本创建tensor的方式，使用方法和参数与np.array完全一致</strong></p>
+</li>
+<li>
+<p>torch.tensor(3.1415)  # size或者shape为:torch.Size([])</p>
+</li>
+<li>
+<p>torch.tensor([1,2])   # torch.Size([2])</p>
+</li>
+</ul>
+<p><em>注意对比torch.tensor和torch.Tensor的区别</em></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">torch.Tensor(2,3)       # 2x3的二维张量</span><br><span class="line">torch.tensor([2,3])     # 元素为2,3的一维张量，没有torch.tensor(2,3)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">torch.tensor([0.11111, 0.22222, 0.33333], dtype=torch.float16, device=torch.device(&quot;cpu&quot;))</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tensor([0.1111, 0.2222, 0.3333], dtype=torch.float16)</span><br></pre></td></tr></table></figure>
+<h3><span id="常用tensor操作">常用Tensor操作</span></h3>
+<ul>
+<li>
+<p>view方法<br>
+通过tensor.view方法可以调整tensor的形状，但是必须保证前后的数据个数一致。view方法不会修改本身数据，<strong>返回的新tensor与源tensor共享内存</strong>，也即更改其中的一个，另外一个也会发生改变。如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">a=torch.arange(0,6)</span><br><span class="line">print(a)</span><br><span class="line">b = a.view(2,3)</span><br><span class="line">print(b)</span><br><span class="line">b[0][0]=10</span><br><span class="line">print(b)</span><br><span class="line">print(a)</span><br></pre></td></tr></table></figure>
+<p>输出结果为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">tensor([0, 1, 2, 3, 4, 5])  # 原a</span><br><span class="line">tensor([[0, 1, 2],</span><br><span class="line">      [3, 4, 5]])  # 原b</span><br><span class="line">tensor([[10,  1,  2],</span><br><span class="line">      [ 3,  4,  5]])  # 更改后的b</span><br><span class="line">tensor([10,  1,  2,  3,  4,  5])  # 更改后的a</span><br></pre></td></tr></table></figure>
+<p>当不指定某一维度时，会自动计算，但是唏嘘保证元素个数对应：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">c = a.view(-1,6)</span><br></pre></td></tr></table></figure>
+<p>则会生成1*6的矩阵。</p>
+</li>
+<li>
+<p>squeeze和unsqueeze方法<br>
+在实际应用中可能经常需要添加或者减少某一维度，这时候需要squeeze和unsqueeze方法。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">a=torch.arange(0,6)</span><br><span class="line">b = a.view(-1, 3)  # b.shape=torch.Size([2,3])</span><br><span class="line">b.unsqueeze(1)  # 在b维度为1的位置上增加1，等价于b[:,None]</span><br><span class="line">print(b.shape)  # 不会更改b本身，还是torch.Size([2,3]</span><br><span class="line">print(b[:,None].shape)  # torch.Size([2,1,3]，可以看做是2个1x3的张量</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">c = b.view(1,1,1,2,3)  # b.shape:torch.Size([1, 1, 1, 2, 3])</span><br><span class="line">c.squeeze(0)  # 压缩第0维的1</span><br><span class="line">c.squeeze()  # 把所有维度为1的压缩</span><br><span class="line">print(c.squeeze())</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tensor([[10,  1,  2],</span><br><span class="line">      [ 3,  4,  5]])</span><br></pre></td></tr></table></figure>
+</li>
+<li>
+<p>resize方法<br>
+resize是另一种可以用来调整size的方法，但是与view不同，他可以修改tensor的大小，如果大小超过了原大小，会自动分配新的内存空间，如果小于原大小，则之前的数据依旧会保存。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">b.resize_(1,3)</span><br><span class="line">print(b)</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tensor([[10,  1,  2]])  # 只保留了前三个数据，但是剩下的数据也会被保存</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">b.resize_(3,3)</span><br></pre></td></tr></table></figure>
+<p>输出为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">tensor([[                 10,                   1,                   2],</span><br><span class="line">      [                  3,                   4,                   5],</span><br><span class="line">      [8180227358008016896,                   0,                   0]])</span><br></pre></td></tr></table></figure>
+<p>即旧的数据依旧保存着，同时多出的大小会分配新的空间</p>
+</li>
+</ul>
+<h3><span id="索引操作">索引操作</span></h3>
+<p>Tensor支持与np.ndarray类似的索引操作，语法上也类似，一般来讲，所引出来的结果与原tensor共享内存，也即修改一个，另一个也会跟着修改。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">a = torch.randn(3,4)</span><br><span class="line">print(a)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">tensor([[ 0.0249,  0.5411, -1.4248, -0.1054],</span><br><span class="line">        [ 1.1718,  1.5523,  0.2355, -1.0398],</span><br><span class="line">        [-0.0671,  1.1938, -1.5383, -0.1786]])</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">a[0][-1]  # 第0行最后一个元素tensor(0.4859)</span><br></pre></td></tr></table></figure>
+<p>None类似于np.newaxis，为a新增一个轴，等价于a.view(1,a.shapep[0],a.shape[1])</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">a[None].shape  # torch.Size([1, 3, 4])</span><br><span class="line">a[None,:,:].shape  # torch.Size([1, 3, 4])</span><br><span class="line">a[:,None,:].shape  # torch.Size([3, 1, 4])</span><br><span class="line">a[:,:,None].shape  # torch.Size([3, 4, 1])</span><br><span class="line">a[:,None,:,None,None].shape  # torch.Size([3, 1, 4, 1, 1])</span><br><span class="line"># 即哪个位置增加None则哪个位置增加一个维度</span><br></pre></td></tr></table></figure>
+<p>同样可以对a中的元素进行判断，返回0、1值：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">a &gt; 1   # tensor([[0, 0, 0, 0],</span><br><span class="line">        [1, 1, 0, 0],</span><br><span class="line">        [0, 1, 0, 0]], dtype=torch.uint8)</span><br><span class="line">a[a&gt;1]  # tensor([1.1718, 1.5523, 1.1938])</span><br></pre></td></tr></table></figure>
+<h3><span id="tensor类型">Tensor类型</span></h3>
+<p>Tensor有不同的数据类型，如下表所示，每种类型分别对应有CPU和GPU版本，默认的Tensor是FloatTensor，可通过<code>torch.set_default_tensor_type</code>来修改默认的tensor类型。Tensor的类型对分析内存占用很有帮助，例如对于一个size为(1000,1000,1000)的FloatTensor来说，他有<code>1000*1000*1000=10^9</code>个元素，每个元素占<code>32bit/8=4Byte</code>内存，所以共占大约4GB内存空间。HalfTensor是专门为GPU版本设计的，同样的元素个数，显存占用只有CPU的一半，所以可以极大的环节GPU显存不足的情况，但是由于HalfTensor所能表示的数值大小和精度有限，所以可能会出现溢出等问题。</p>
+<table>
+<thead>
+<tr>
+<th>Data type</th>
+<th>dtype</th>
+<th>CPU tensor</th>
+<th>GPU tensor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>32-bit floating point</td>
+<td><code>torch.float32</code> or <code>torch.float</code></td>
+<td><code>torch.FloatTensor</code></td>
+<td><code>torch.cuda.FloatTensor</code></td>
+</tr>
+<tr>
+<td>64-bit floating point</td>
+<td><code>torch.float64</code> or <code>torch.double</code></td>
+<td><code>torch.DoubleTensor</code></td>
+<td><code>torch.cuda.DoubleTensor</code></td>
+</tr>
+<tr>
+<td>16-bit floating point</td>
+<td><code>torch.float16</code> or <code>torch.half</code></td>
+<td><code>torch.HalfTensor</code></td>
+<td><code>torch.cuda.HalfTensor</code></td>
+</tr>
+<tr>
+<td>8-bit integer (unsigned)</td>
+<td><code>torch.uint8</code></td>
+<td><a href="https://pytorch.org/docs/stable/tensors.html#torch.ByteTensor" target="_blank" rel="noopener"><code>torch.ByteTensor</code></a></td>
+<td><code>torch.cuda.ByteTensor</code></td>
+</tr>
+<tr>
+<td>8-bit integer (signed)</td>
+<td><code>torch.int8</code></td>
+<td><code>torch.CharTensor</code></td>
+<td><code>torch.cuda.CharTensor</code></td>
+</tr>
+<tr>
+<td>16-bit integer (signed)</td>
+<td><code>torch.int16</code> or <code>torch.short</code></td>
+<td><code>torch.ShortTensor</code></td>
+<td><code>torch.cuda.ShortTensor</code></td>
+</tr>
+<tr>
+<td>32-bit integer (signed)</td>
+<td><code>torch.int32</code> or <code>torch.int</code></td>
+<td><code>torch.IntTensor</code></td>
+<td><code>torch.cuda.IntTensor</code></td>
+</tr>
+<tr>
+<td>64-bit integer (signed)</td>
+<td><code>torch.int64</code> or <code>torch.long</code></td>
+<td><code>torch.LongTensor</code></td>
+<td><code>torch.cuda.LongTensor</code></td>
+</tr>
+</tbody>
+</table>
+<p>各种数据类型之间可以互相转换，<code>type(new_type)</code>是通用的做法，同时还有<code>float、long、half</code>等快捷方法。CPU tensor与GPU tensor之间的互相转换通过tensor.cuda和tensor.cpu方法实现，<a href="http://xn--tensor-2x8i64bc2w32mz62cjryarr6e.to" target="_blank" rel="noopener">此外还可以使用tensor.to</a>(device)。Tensor还有一个<code>new</code>方法，用法与<code>torch.Tensor</code>一样，会调用该<code>tensor</code>对应类型的构造函数，生成与当前tensor类型一致的tensor。<code>torch.*_like(tensora)</code> 可以生成和<code>tensor拥有同样属性(类型，形状，cpu/gpu)</code>的新tensor。 <code>tensor.new_*(new_shape)</code> 新建一个不同形状的tensor。</p>
+
                 
 
                 <hr>
@@ -255,7 +516,7 @@
         <div id="toc" class="toc-article">
         <strong class="toc-title">Contents</strong>
         
-          <ol class="nav">none</ol>
+          <ol class="toc-nav"><li class="toc-nav-item toc-nav-level-2"><a class="toc-nav-link" href="#undefined"><span class="toc-nav-number">1.</span> <span class="toc-nav-text">写在前面：</span></a></li><li class="toc-nav-item toc-nav-level-2"><a class="toc-nav-link" href="#undefined"><span class="toc-nav-number">2.</span> <span class="toc-nav-text">Pytorch张量：</span></a><ol class="toc-nav-child"><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#undefined"><span class="toc-nav-number">2.1.</span> <span class="toc-nav-text">创建Tensor</span></a></li><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#undefined"><span class="toc-nav-number">2.2.</span> <span class="toc-nav-text">常用Tensor操作</span></a></li><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#undefined"><span class="toc-nav-number">2.3.</span> <span class="toc-nav-text">索引操作</span></a></li><li class="toc-nav-item toc-nav-level-3"><a class="toc-nav-link" href="#undefined"><span class="toc-nav-number">2.4.</span> <span class="toc-nav-text">Tensor类型</span></a></li></ol></li></ol>
         
         </div>
       </aside>
